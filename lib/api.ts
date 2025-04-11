@@ -1,5 +1,43 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 
+// Types
+interface User {
+  id: number
+  name: string
+  email: string
+  accountNumber: number
+  balance: number
+  role: string
+}
+
+interface LoginResponse {
+  status: string
+  message: string
+  user: User
+}
+
+interface Account {
+  id: number
+  accountNumber: number
+  balance: number
+}
+
+interface Transaction {
+  id: number
+  transactionType: "Deposit" | "Withdrawal" | "Transfer"
+  amount: number
+  description: string
+  timestamp: string
+  sender?: {
+    id: number
+    accountNumber: number
+  }
+  receiver?: {
+    id: number
+    accountNumber: number
+  }
+}
+
 // Base API request function with error handling
 const apiRequest = async <T>(
   endpoint: string,
@@ -25,7 +63,6 @@ const apiRequest = async <T>(
   }
 
   try {
-    // Remove the leading slash from endpoint if it exists
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
     const response = await fetch(`${API_BASE_URL}/${cleanEndpoint}`, options);
     
@@ -44,65 +81,49 @@ const apiRequest = async <T>(
 }
 
 // Auth endpoints
-export const loginUser = async (email: string, password: string) => {
+export const loginUser = async (email: string, password: string): Promise<LoginResponse> => {
   return apiRequest('auth/login', 'POST', { email, password });
 };
 
-export const loginAdmin = async (email: string, password: string) => {
+export const loginAdmin = async (email: string, password: string): Promise<LoginResponse> => {
   return apiRequest('auth/admin/login', 'POST', { email, password });
 };
 
 export const registerUser = async (userData: {
-  name: string;
-  email: string;
-  password: string;
-  accountNumber: string;
-  startingBalance: number;
-}) => {
-  return apiRequest('auth/register', 'POST', userData);
+  name: string
+  email: string
+  password: string
+  confirmPassword: string
+  accountNumber: number
+  balance?: number
+}): Promise<User> => {
+  return apiRequest('users/register', 'POST', userData);
 };
 
 // Account endpoints
-export const getAccountBalance = async (accountNumber: number) => {
-  return apiRequest(`/accounts/${accountNumber}/balance`);
+export const getAccountDetails = async (accountNumber: number): Promise<Account> => {
+  return apiRequest(`accounts/${accountNumber}`);
 };
 
-export const getAccountDetails = async (accountNumber: number) => {
-  return apiRequest(`/accounts/${accountNumber}`);
+export const getAccountBalance = async (accountNumber: number): Promise<number> => {
+  return apiRequest(`accounts/${accountNumber}/balance`);
 };
 
-export interface Transaction {
-  id: string
-  type: "deposit" | "withdrawal" | "transfer"
-  amount: number
-  date: string
-  description: string
-  balance: number
-}
-
+// Transaction endpoints
 export const getTransactions = async (accountNumber: number): Promise<Transaction[]> => {
-  try {
-    const response = await apiRequest<{ transactions: Transaction[] }>(
-      `transactions/account/${accountNumber}`,
-      "GET"
-    )
-    return response.transactions
-  } catch (error) {
-    console.error("Error fetching transactions:", error)
-    throw error
-  }
-}
-
-export const depositFunds = async (accountNumber: number, amount: number) => {
-  return apiRequest(`/accounts/${accountNumber}/deposit`, 'POST', { amount });
+  return apiRequest(`transactions/account/${accountNumber}`);
 };
 
-export const withdrawFunds = async (accountNumber: number, amount: number) => {
-  return apiRequest(`/accounts/${accountNumber}/withdraw`, 'POST', { amount });
+export const depositFunds = async (accountNumber: number, data: { amount: number }): Promise<Transaction> => {
+  return apiRequest(`transactions/deposit/${accountNumber}`, 'POST', data);
 };
 
-export const transferFunds = async (fromAccountNumber: number, toAccountNumber: number, amount: number) => {
-  return apiRequest(`/accounts/${fromAccountNumber}/transfer`, 'POST', { toAccountNumber, amount });
+export const withdrawFunds = async (accountNumber: number, data: { amount: number }): Promise<Transaction> => {
+  return apiRequest(`transactions/withdraw/${accountNumber}`, 'POST', data);
+};
+
+export const transferFunds = async (senderId: number, receiverId: number, data: { amount: number }): Promise<Transaction> => {
+  return apiRequest('transactions/transfer', 'POST', { senderId, receiverId, ...data });
 };
 
 // Error handling utility

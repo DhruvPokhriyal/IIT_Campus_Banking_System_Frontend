@@ -41,23 +41,25 @@ import { useAuth } from "@/lib/auth-context"
 
 // Types
 interface AccountDetails {
+  id: number
   accountNumber: number
-  accountType: string
-  status: string
-  createdAt: string
-}
-
-interface BalanceResponse {
   balance: number
 }
 
 interface Transaction {
-  id: string
-  type: "deposit" | "withdrawal" | "transfer"
+  id: number
+  transactionType: "Deposit" | "Withdrawal" | "Transfer"
   amount: number
-  date: string
   description: string
-  balance: number
+  timestamp: string
+  sender?: {
+    id: number
+    accountNumber: number
+  }
+  receiver?: {
+    id: number
+    accountNumber: number
+  }
 }
 
 export default function DashboardPage() {
@@ -101,15 +103,15 @@ export default function DashboardPage() {
   
       // Handle each promise result individually
       if (details.status === 'fulfilled') {
-        setAccountDetails(details.value as AccountDetails)
+        setAccountDetails(details.value)
       }
       
       if (balanceData.status === 'fulfilled') {
-        setBalance((balanceData.value as BalanceResponse).balance)
+        setBalance(balanceData.value)
       }
       
       if (transactionsData.status === 'fulfilled') {
-        setTransactions((transactionsData.value as Transaction[]) || [])
+        setTransactions(transactionsData.value || [])
       }
   
       // Check if any requests failed
@@ -160,24 +162,13 @@ export default function DashboardPage() {
 
     try {
       const amount = Number(depositAmount)
-
-      // Call API to deposit funds
-      await depositFunds(user?.accountNumber || 0, amount)
-
-      // Update balance and transactions
-      const newBalance = (balance || 0) + amount
-      setBalance(newBalance)
-
-      const newTransaction: Transaction = {
-        id: `tx_${Date.now()}`,
-        type: "deposit",
-        amount,
-        date: new Date().toISOString().split("T")[0],
-        description: "Deposit",
-        balance: newBalance,
-      }
-
-      setTransactions([newTransaction, ...transactions])
+      const transaction = await depositFunds(user?.accountNumber || 0, { amount })
+      
+      // Update balance
+      setBalance((balance || 0) + amount)
+      
+      // Add new transaction to the list
+      setTransactions([transaction, ...transactions])
 
       toast({
         title: "Deposit successful",
@@ -221,23 +212,13 @@ export default function DashboardPage() {
     setActionLoading(true)
 
     try {
-      // Call API to withdraw funds
-      await withdrawFunds(user?.accountNumber || 0, amount)
-
-      // Update balance and transactions
-      const newBalance = (balance || 0) - amount
-      setBalance(newBalance)
-
-      const newTransaction: Transaction = {
-        id: `tx_${Date.now()}`,
-        type: "withdrawal",
-        amount,
-        date: new Date().toISOString().split("T")[0],
-        description: "Withdrawal",
-        balance: newBalance,
-      }
-
-      setTransactions([newTransaction, ...transactions])
+      const transaction = await withdrawFunds(user?.accountNumber || 0, { amount })
+      
+      // Update balance
+      setBalance((balance || 0) - amount)
+      
+      // Add new transaction to the list
+      setTransactions([transaction, ...transactions])
 
       toast({
         title: "Withdrawal successful",
@@ -290,23 +271,17 @@ export default function DashboardPage() {
     setActionLoading(true)
 
     try {
-      // Call API to transfer funds
-      await transferFunds(user?.accountNumber || 0, Number(receiverId), amount)
-
-      // Update balance and transactions
-      const newBalance = (balance || 0) - amount
-      setBalance(newBalance)
-
-      const newTransaction: Transaction = {
-        id: `tx_${Date.now()}`,
-        type: "transfer",
-        amount,
-        date: new Date().toISOString().split("T")[0],
-        description: `Transfer to ${receiverId}`,
-        balance: newBalance,
-      }
-
-      setTransactions([newTransaction, ...transactions])
+      const transaction = await transferFunds(
+        user?.accountNumber || 0,
+        Number(receiverId),
+        { amount }
+      )
+      
+      // Update balance
+      setBalance((balance || 0) - amount)
+      
+      // Add new transaction to the list
+      setTransactions([transaction, ...transactions])
 
       toast({
         title: "Transfer successful",
@@ -378,16 +353,8 @@ export default function DashboardPage() {
                       <p className="font-medium">{accountDetails?.accountNumber}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Account Type</p>
-                      <p className="font-medium">{accountDetails?.accountType}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Status</p>
-                      <p className="font-medium">{accountDetails?.status}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Created At</p>
-                      <p className="font-medium">{accountDetails?.createdAt}</p>
+                      <p className="text-sm text-muted-foreground">Balance</p>
+                      <p className="font-medium">${accountDetails?.balance.toFixed(2)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -420,35 +387,44 @@ export default function DashboardPage() {
                           className="flex items-center justify-between p-4 border rounded-lg"
                         >
                           <div className="flex items-center space-x-4">
-                            {transaction.type === "deposit" ? (
+                            {transaction.transactionType === "Deposit" ? (
                               <ArrowDownIcon className="h-6 w-6 text-green-500" />
-                            ) : transaction.type === "withdrawal" ? (
+                            ) : transaction.transactionType === "Withdrawal" ? (
                               <ArrowUpIcon className="h-6 w-6 text-red-500" />
                             ) : (
                               <ArrowRightIcon className="h-6 w-6 text-blue-500" />
                             )}
                             <div>
                               <p className="font-medium">{transaction.description}</p>
-                              <p className="text-sm text-muted-foreground">{transaction.date}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {new Date(transaction.timestamp).toLocaleDateString()}
+                              </p>
                             </div>
                           </div>
                           <div className="text-right">
                             <p
                               className={`font-medium ${
-                                transaction.type === "deposit"
+                                transaction.transactionType === "Deposit"
                                   ? "text-green-500"
-                                  : transaction.type === "withdrawal"
+                                  : transaction.transactionType === "Withdrawal"
                                   ? "text-red-500"
                                   : "text-blue-500"
                               }`}
                             >
-                              {transaction.type === "deposit" ? "+" : "-"}${Math.abs(
+                              {transaction.transactionType === "Deposit" ? "+" : "-"}${Math.abs(
                                 transaction.amount
                               ).toFixed(2)}
                             </p>
-                            <p className="text-sm text-muted-foreground">
-                              Balance: ${transaction.balance.toFixed(2)}
-                            </p>
+                            {transaction.receiver && (
+                              <p className="text-sm text-muted-foreground">
+                                To: {transaction.receiver.accountNumber}
+                              </p>
+                            )}
+                            {transaction.sender && (
+                              <p className="text-sm text-muted-foreground">
+                                From: {transaction.sender.accountNumber}
+                              </p>
+                            )}
                           </div>
                         </div>
                       ))}
