@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -13,11 +11,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
-import { loginAdmin, loginUser } from "@/lib/api"
+import { useAuth } from "@/lib/auth-context"
 
 export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { login } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState("user")
   const [formData, setFormData] = useState({
@@ -52,7 +51,6 @@ export default function LoginPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  // Update the handleSubmit function to completely bypass API calls in development/preview mode
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -61,54 +59,19 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      // DEVELOPMENT MODE: Always use mock data for login in preview/development
-      // In a production environment, you would remove this mock data approach
-      const mockUserData = {
-        token: "mock-token",
-        name: activeTab === "user" ? "Test User" : "Admin User",
-        accountNumber: activeTab === "user" ? "1234567890" : "9876543210",
-        accountId: activeTab === "user" ? "acc_123456" : "acc_admin",
-      }
+      await login(formData.email, formData.password, activeTab)
 
-      // Store token in localStorage
-      localStorage.setItem("financeFlowToken", mockUserData.token)
-
-      // Store user info
-      localStorage.setItem(
-        "financeFlowUser",
-        JSON.stringify({
-          name: mockUserData.name,
-          email: formData.email,
-          accountNumber: mockUserData.accountNumber,
-          accountId: mockUserData.accountId,
-          role: activeTab,
-        }),
-      )
-
-      // Show development mode notification
       toast({
-        title: "Development Mode",
-        description: "Logged in with mock data. API connection not required in preview mode.",
+        title: "Success",
+        description: "Logged in successfully",
       })
 
-      // Redirect to dashboard
       router.push("/dashboard")
-
-      // Optional: Try to call the API in the background, but don't wait for it or let it block the login
-      if (activeTab === "user") {
-        loginUser(formData.email, formData.password).catch((error) => {
-          console.warn("Background API login attempt failed:", error)
-        })
-      } else {
-        loginAdmin(formData.email, formData.password).catch((error) => {
-          console.warn("Background API admin login attempt failed:", error)
-        })
-      }
     } catch (error) {
       console.error("Login error:", error)
       toast({
         title: "Login failed",
-        description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
         variant: "destructive",
       })
     } finally {
@@ -117,24 +80,29 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="container flex h-screen max-w-screen-md flex-col items-center justify-center py-12">
-      <Link href="/" className="mb-8 flex items-center text-sm font-medium text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to home
+    <div className="container flex h-screen w-screen flex-col items-center justify-center">
+      <Link
+        href="/"
+        className="absolute left-4 top-4 md:left-8 md:top-8"
+      >
+        <Button variant="ghost">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
       </Link>
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl">Sign in</CardTitle>
+          <CardTitle>Welcome back</CardTitle>
           <CardDescription>Enter your credentials to access your account</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="user" onValueChange={setActiveTab}>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="user">User</TabsTrigger>
               <TabsTrigger value="admin">Admin</TabsTrigger>
             </TabsList>
-            <TabsContent value="user">
-              <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+            <TabsContent value="user" className="mt-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -146,16 +114,10 @@ export default function LoginPage() {
                     onChange={handleChange}
                     disabled={isLoading}
                   />
-                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                  {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
                 </div>
-
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
-                    <Link href="#" className="text-xs font-medium text-teal-600 hover:underline">
-                      Forgot password?
-                    </Link>
-                  </div>
+                  <Label htmlFor="password">Password</Label>
                   <Input
                     id="password"
                     name="password"
@@ -164,25 +126,17 @@ export default function LoginPage() {
                     onChange={handleChange}
                     disabled={isLoading}
                   />
-                  {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+                  {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
                 </div>
-
-                <Button type="submit" className="w-full bg-teal-600 hover:bg-teal-700" disabled={isLoading}>
+                <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Signing in..." : "Sign in"}
                 </Button>
-
-                <div className="text-center text-sm">
-                  Don&apos;t have an account?{" "}
-                  <Link href="/register" className="font-medium text-teal-600 hover:underline">
-                    Create one
-                  </Link>
-                </div>
               </form>
             </TabsContent>
-            <TabsContent value="admin">
-              <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+            <TabsContent value="admin" className="mt-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Admin Email</Label>
+                  <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
                     name="email"
@@ -192,16 +146,10 @@ export default function LoginPage() {
                     onChange={handleChange}
                     disabled={isLoading}
                   />
-                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                  {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
                 </div>
-
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
-                    <Link href="#" className="text-xs font-medium text-teal-600 hover:underline">
-                      Forgot password?
-                    </Link>
-                  </div>
+                  <Label htmlFor="password">Password</Label>
                   <Input
                     id="password"
                     name="password"
@@ -210,15 +158,20 @@ export default function LoginPage() {
                     onChange={handleChange}
                     disabled={isLoading}
                   />
-                  {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+                  {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
                 </div>
-
-                <Button type="submit" className="w-full bg-teal-600 hover:bg-teal-700" disabled={isLoading}>
-                  {isLoading ? "Signing in..." : "Sign in as Admin"}
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Signing in..." : "Sign in"}
                 </Button>
               </form>
             </TabsContent>
           </Tabs>
+          <div className="mt-4 text-center text-sm">
+            Don't have an account?{" "}
+            <Link href="/register" className="font-medium text-primary hover:underline">
+              Sign up
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>

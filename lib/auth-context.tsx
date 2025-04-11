@@ -2,13 +2,14 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import { loginUser, loginAdmin, registerUser } from "@/lib/api"
+import { loginUser, loginAdmin, registerUser, handleApiError } from "@/lib/api"
 
 interface User {
+  id: number
   name: string
   email: string
-  accountNumber: string
-  accountId: string
+  accountNumber: number
+  balance: number
   role: string
 }
 
@@ -16,9 +17,11 @@ interface AuthContextType {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
+  error: string | null
   login: (email: string, password: string, role: string) => Promise<void>
   logout: () => void
   register: (userData: RegisterData) => Promise<void>
+  clearError: () => void
 }
 
 interface RegisterData {
@@ -34,32 +37,38 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
-    // Check if user is logged in
-    const token = localStorage.getItem("financeFlowToken")
-    const userData = localStorage.getItem("financeFlowUser")
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem("financeFlowToken")
+        const userData = localStorage.getItem("financeFlowUser")
 
-    if (!token || !userData) {
-      setIsLoading(false)
-      return
+        if (!token || !userData) {
+          setIsLoading(false)
+          return
+        }
+
+        const parsedUser = JSON.parse(userData) as User
+        setUser(parsedUser)
+      } catch (error) {
+        console.error("Auth check error:", error)
+        localStorage.removeItem("financeFlowToken")
+        localStorage.removeItem("financeFlowUser")
+        setError("Session expired. Please login again.")
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    try {
-      const parsedUser = JSON.parse(userData) as User
-      setUser(parsedUser)
-    } catch (error) {
-      // Invalid user data
-      localStorage.removeItem("financeFlowToken")
-      localStorage.removeItem("financeFlowUser")
-    } finally {
-      setIsLoading(false)
-    }
+    checkAuth()
   }, [])
 
   const login = async (email: string, password: string, role: string) => {
     setIsLoading(true)
+    setError(null)
     try {
       let response
 
@@ -69,24 +78,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         response = await loginAdmin(email, password)
       }
 
-      // Store token in localStorage
-      localStorage.setItem("financeFlowToken", response.token || "mock-token")
-
-      // Create user object
-      const userData: User = {
-        name: response.name || "User",
-        email,
-        accountNumber: response.accountNumber || "1234567890",
-        accountId: response.accountId || "acc_123456",
-        role,
+      if (response.status !== "LOGIN_SUCCESS") {
+        throw new Error(response.message || "Login failed")
       }
 
-      // Store user info
-      localStorage.setItem("financeFlowUser", JSON.stringify(userData))
+      if (!response.user) {
+        throw new Error("Invalid response from server: Missing user data")
+      }
 
+      // Store the user data
+      const userData: User = {
+        id: response.user.id,
+        name: response.user.name,
+        email: response.user.email,
+        accountNumber: response.user.accountNumber,
+        balance: response.user.balance,
+        role: response.user.role,
+      }
+
+      localStorage.setItem("financeFlowUser", JSON.stringify(userData))
       setUser(userData)
+      router.push("/dashboard")
     } catch (error) {
-      console.error("Login error:", error)
+      const apiError = handleApiError(error)
+      setError(apiError.message)
       throw error
     } finally {
       setIsLoading(false)
@@ -97,19 +112,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("financeFlowToken")
     localStorage.removeItem("financeFlowUser")
     setUser(null)
+    setError(null)
     router.push("/login")
   }
 
   const register = async (userData: RegisterData) => {
     setIsLoading(true)
+    setError(null)
     try {
-      await registerUser(userData)
+      const response = await registerUser(userData)
+      
+      if (response.status !== "REGISTRATION_SUCCESS") {
+        throw new Error(response.message || "Registration failed")
+      }
+
+      router.push("/login")
     } catch (error) {
-      console.error("Registration error:", error)
+      const apiError = handleApiError(error)
+      setError(apiError.message)
       throw error
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const clearError = () => {
+    setError(null)
   }
 
   return (
@@ -118,9 +146,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         isAuthenticated: !!user,
+        error,
         login,
         logout,
         register,
+        clearError,
       }}
     >
       {children}

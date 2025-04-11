@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -12,19 +10,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import { registerUser } from "@/lib/api"
+import { useAuth } from "@/lib/auth-context"
 
 export default function RegisterPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { register } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
-    accountNumber: Math.floor(1000000000 + Math.random() * 9000000000).toString(),
-    startingBalance: "1000",
+    accountNumber: "",
+    startingBalance: "",
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -48,25 +47,19 @@ export default function RegisterPage() {
     if (!formData.name.trim()) newErrors.name = "Name is required"
     if (!formData.email.trim()) newErrors.email = "Email is required"
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Email is invalid"
-
     if (!formData.password) newErrors.password = "Password is required"
     else if (formData.password.length < 6) newErrors.password = "Password must be at least 6 characters"
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match"
-    }
-
+    if (!formData.confirmPassword) newErrors.confirmPassword = "Please confirm your password"
+    else if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = "Passwords do not match"
     if (!formData.accountNumber) newErrors.accountNumber = "Account number is required"
     if (!formData.startingBalance) newErrors.startingBalance = "Starting balance is required"
-    else if (isNaN(Number(formData.startingBalance))) {
-      newErrors.startingBalance = "Starting balance must be a number"
-    }
+    else if (isNaN(Number(formData.startingBalance)) || Number(formData.startingBalance) < 0)
+      newErrors.startingBalance = "Please enter a valid amount"
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
-  // Update the handleSubmit function to completely bypass API calls in development/preview mode
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -75,26 +68,19 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
-      // DEVELOPMENT MODE: Always consider registration successful in preview/development
-      // In a production environment, you would remove this mock approach
-
-      toast({
-        title: "Account created!",
-        description: "Your account has been created successfully. (Development Mode)",
-      })
-
-      // Optional: Try to register with the API in the background, but don't wait for it
-      registerUser({
+      await register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
         accountNumber: formData.accountNumber,
         startingBalance: Number.parseFloat(formData.startingBalance),
-      }).catch((error) => {
-        console.warn("Background API registration attempt failed:", error)
       })
 
-      // Redirect to login page
+      toast({
+        title: "Account created!",
+        description: "Your account has been created successfully.",
+      })
+
       router.push("/login")
     } catch (error) {
       console.error("Registration error:", error)
@@ -110,20 +96,27 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="container flex h-screen max-w-screen-md flex-col items-center justify-center py-12">
-      <Link href="/" className="mb-8 flex items-center text-sm font-medium text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to home
+    <div className="container flex h-screen w-screen flex-col items-center justify-center">
+      <Link
+        href="/"
+        className="absolute left-4 top-4 md:left-8 md:top-8"
+      >
+        <Button variant="ghost">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
       </Link>
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl">Create an account</CardTitle>
-          <CardDescription>Enter your information below to create your bank account</CardDescription>
+          <CardTitle>Create an account</CardTitle>
+          <CardDescription>
+            Enter your information below to create your account
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="name">Name</Label>
               <Input
                 id="name"
                 name="name"
@@ -132,9 +125,8 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 disabled={isLoading}
               />
-              {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+              {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -146,76 +138,68 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 disabled={isLoading}
               />
-              {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+              {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                />
-                {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                />
-                {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword}</p>}
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+              {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="accountNumber">Account Number</Label>
-                <Input
-                  id="accountNumber"
-                  name="accountNumber"
-                  value={formData.accountNumber}
-                  onChange={handleChange}
-                  disabled={true}
-                />
-                <p className="text-xs text-muted-foreground">Auto-generated for you</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="startingBalance">Starting Balance ($)</Label>
-                <Input
-                  id="startingBalance"
-                  name="startingBalance"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.startingBalance}
-                  onChange={handleChange}
-                  disabled={isLoading}
-                />
-                {errors.startingBalance && <p className="text-xs text-destructive">{errors.startingBalance}</p>}
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+              {errors.confirmPassword && (
+                <p className="text-sm text-red-500">{errors.confirmPassword}</p>
+              )}
             </div>
-
-            <Button type="submit" className="w-full bg-teal-600 hover:bg-teal-700" disabled={isLoading}>
-              {isLoading ? "Creating Account..." : "Create Account"}
+            <div className="space-y-2">
+              <Label htmlFor="accountNumber">Account Number</Label>
+              <Input
+                id="accountNumber"
+                name="accountNumber"
+                placeholder="1234567890"
+                value={formData.accountNumber}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+              {errors.accountNumber && (
+                <p className="text-sm text-red-500">{errors.accountNumber}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="startingBalance">Starting Balance</Label>
+              <Input
+                id="startingBalance"
+                name="startingBalance"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="1000.00"
+                value={formData.startingBalance}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+              {errors.startingBalance && (
+                <p className="text-sm text-red-500">{errors.startingBalance}</p>
+              )}
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Creating account..." : "Create account"}
             </Button>
-
-            <div className="text-center text-sm">
-              Already have an account?{" "}
-              <Link href="/login" className="font-medium text-teal-600 hover:underline">
-                Sign in
-              </Link>
-            </div>
           </form>
         </CardContent>
       </Card>

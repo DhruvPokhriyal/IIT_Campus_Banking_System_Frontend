@@ -1,126 +1,118 @@
-// API service functions to interact with the backend
-
-const API_BASE_URL = "http://localhost:8080"
-
-// Helper function to get the auth token
-const getToken = () => {
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("financeFlowToken")
-  }
-  return null
-}
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 
 // Base API request function with error handling
-const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
-  const token = getToken()
+const apiRequest = async <T>(
+  endpoint: string,
+  method: string = "GET",
+  data?: any
+): Promise<T> => {
+  const token = localStorage.getItem('financeFlowToken');
+  
+  const defaultHeaders = {
+    'Content-Type': 'application/json',
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
 
-  const headers = {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options.headers,
+  const options: RequestInit = {
+    method,
+    headers: {
+      ...defaultHeaders,
+    },
+  };
+
+  if (data) {
+    options.body = JSON.stringify(data);
   }
 
   try {
-    // Add a timeout to the fetch request to avoid hanging
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
-
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers,
-      mode: "cors",
-      credentials: "include",
-      signal: controller.signal,
-    })
-
-    clearTimeout(timeoutId)
-
+    // Remove the leading slash from endpoint if it exists
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+    const response = await fetch(`${API_BASE_URL}/${cleanEndpoint}`, options);
+    
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `API request failed: ${response.statusText}`)
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
 
-    return response.json()
+    return await response.json();
   } catch (error) {
-    console.error("API request error:", error)
-
-    // Provide more specific error messages based on the error type
-    if (error instanceof TypeError && error.message === "Failed to fetch") {
-      throw new Error(`Unable to connect to the API server at ${API_BASE_URL}. Please ensure the server is running.`)
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error('Unable to connect to the server. Please check your connection.');
     }
+    throw error;
+  }
+}
 
-    if (error.name === "AbortError") {
-      throw new Error("Request timed out. Please check your network connection and try again.")
-    }
+// Auth endpoints
+export const loginUser = async (email: string, password: string) => {
+  return apiRequest('auth/login', 'POST', { email, password });
+};
 
+export const loginAdmin = async (email: string, password: string) => {
+  return apiRequest('auth/admin/login', 'POST', { email, password });
+};
+
+export const registerUser = async (userData: {
+  name: string;
+  email: string;
+  password: string;
+  accountNumber: string;
+  startingBalance: number;
+}) => {
+  return apiRequest('auth/register', 'POST', userData);
+};
+
+// Account endpoints
+export const getAccountBalance = async (accountNumber: number) => {
+  return apiRequest(`/accounts/${accountNumber}/balance`);
+};
+
+export const getAccountDetails = async (accountNumber: number) => {
+  return apiRequest(`/accounts/${accountNumber}`);
+};
+
+export interface Transaction {
+  id: string
+  type: "deposit" | "withdrawal" | "transfer"
+  amount: number
+  date: string
+  description: string
+  balance: number
+}
+
+export const getTransactions = async (accountNumber: number): Promise<Transaction[]> => {
+  try {
+    const response = await apiRequest<{ transactions: Transaction[] }>(
+      `transactions/account/${accountNumber}`,
+      "GET"
+    )
+    return response.transactions
+  } catch (error) {
+    console.error("Error fetching transactions:", error)
     throw error
   }
 }
 
-// User Registration and Authentication
-export const registerUser = (userData: {
-  name: string
-  email: string
-  password: string
-  accountNumber: string
-  startingBalance: number
-}) => {
-  return apiRequest("/api/users/register", {
-    method: "POST",
-    body: JSON.stringify(userData),
-  })
-}
+export const depositFunds = async (accountNumber: number, amount: number) => {
+  return apiRequest(`/accounts/${accountNumber}/deposit`, 'POST', { amount });
+};
 
-export const loginUser = (email: string, password: string) => {
-  return apiRequest("/api/auth/login", {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-  })
-}
+export const withdrawFunds = async (accountNumber: number, amount: number) => {
+  return apiRequest(`/accounts/${accountNumber}/withdraw`, 'POST', { amount });
+};
 
-export const loginAdmin = (email: string, password: string) => {
-  return apiRequest("/api/auth/admin/login", {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-  })
-}
+export const transferFunds = async (fromAccountNumber: number, toAccountNumber: number, amount: number) => {
+  return apiRequest(`/accounts/${fromAccountNumber}/transfer`, 'POST', { toAccountNumber, amount });
+};
 
-// Account Details
-export const getAccountDetails = (accountNumber: string) => {
-  return apiRequest(`/api/accounts/${accountNumber}`)
-}
-
-export const getAccountBalance = (accountNumber: string) => {
-  return apiRequest(`/api/accounts/${accountNumber}/balance`)
-}
-
-// Transactions
-export const getTransactions = (accountId: string) => {
-  return apiRequest(`/api/transactions/account/${accountId}`)
-}
-
-export const depositFunds = (accountId: string, amount: number) => {
-  return apiRequest(`/api/transactions/deposit/${accountId}?amount=${amount}`, {
-    method: "POST",
-  })
-}
-
-export const withdrawFunds = (accountId: string, amount: number) => {
-  return apiRequest(`/api/transactions/withdraw/${accountId}?amount=${amount}`, {
-    method: "POST",
-  })
-}
-
-export const transferFunds = (senderId: string, receiverId: string, amount: number) => {
-  return apiRequest(`/api/transactions/transfer?senderId=${senderId}&receiverId=${receiverId}&amount=${amount}`, {
-    method: "POST",
-  })
-}
-
-// Error handling for API requests
-export const handleApiError = (error: any) => {
-  console.error("API Error:", error)
-  return {
-    message: error.message || "An unexpected error occurred",
+// Error handling utility
+export const handleApiError = (error: unknown) => {
+  if (error instanceof Error) {
+    // Handle specific error messages from the backend
+    if (error.message.includes('More than one row with the given identifier')) {
+      return { message: 'Account data inconsistency detected. Please contact support.' };
+    }
+    return { message: error.message };
   }
-}
+  return { message: 'An unexpected error occurred' };
+};
