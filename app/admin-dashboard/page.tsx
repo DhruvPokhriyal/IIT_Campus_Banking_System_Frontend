@@ -41,30 +41,49 @@ export default function AdminDashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("users")
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    console.log("Admin Dashboard: Checking user and role", { user })
+    console.log("Admin Dashboard: Current user state:", { user })
     if (!user || user.role !== "admin") {
-      console.log("Admin Dashboard: Redirecting to dashboard - User not admin or not logged in")
+      console.log("Admin Dashboard: Not an admin, redirecting...")
       router.push("/dashboard")
       return
     }
 
     const fetchData = async () => {
+      setIsLoading(true)
+      setError(null)
+      
       try {
-        console.log("Admin Dashboard: Starting to fetch data")
-        const [usersData, transactionsData] = await Promise.all([
-          getAllUsers(),
-          getAllTransactions()
-        ])
-        console.log("Admin Dashboard: Fetched data", { 
-          users: usersData, 
-          transactions: transactionsData 
-        })
+        console.log("Admin Dashboard: Starting data fetch...")
+        console.log("Admin Dashboard: Auth token:", localStorage.getItem('financeFlowToken'))
+        
+        // Fetch users
+        let usersData: User[] = []
+        try {
+          usersData = await getAllUsers()
+          console.log("Admin Dashboard: Users fetched successfully:", usersData)
+        } catch (error) {
+          console.error("Admin Dashboard: Error fetching users:", error)
+          toast.error("Failed to load users")
+        }
+
+        // Fetch transactions
+        let transactionsData: Transaction[] = []
+        try {
+          transactionsData = await getAllTransactions()
+          console.log("Admin Dashboard: Transactions fetched successfully:", transactionsData)
+        } catch (error) {
+          console.error("Admin Dashboard: Error fetching transactions:", error)
+          toast.error("Failed to load transactions")
+        }
+
         setUsers(usersData)
         setTransactions(transactionsData)
       } catch (error) {
-        console.error("Admin Dashboard: Error fetching data:", error)
+        console.error("Admin Dashboard: General error:", error)
+        setError("Failed to load data. Please try again later.")
         toast.error("Failed to load data")
       } finally {
         setIsLoading(false)
@@ -85,6 +104,18 @@ export default function AdminDashboardPage() {
               <div className="h-4 bg-gray-200 rounded w-full"></div>
               <div className="h-4 bg-gray-200 rounded w-full"></div>
             </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-700">{error}</p>
           </div>
         </div>
       </div>

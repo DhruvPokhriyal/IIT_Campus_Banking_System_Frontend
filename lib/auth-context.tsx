@@ -81,29 +81,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       console.log('Login response:', response);
 
-      // Check for success message
-      if (response.message === "Login successful") {
-        // For admin login, we might not get a user object
-        if (!response.user) {
-          const adminUser: User = {
-            id: 0,
-            name: "Admin",
-            email: email,
-            accountNumber: 0,
-            balance: 0,
-            role: "admin"
-          };
-          localStorage.setItem("financeFlowUser", JSON.stringify(adminUser));
-          setUser(adminUser);
-          router.push("/dashboard");
-          return;
-        }
+      // Store the token first
+      if (response.token) {
+        localStorage.setItem("financeFlowToken", response.token)
       }
 
-      if (response.status !== "LOGIN_SUCCESS" && response.message !== "Login successful") {
-        throw new Error(response.message || "Login failed")
+      // Handle admin login
+      if (role === "admin") {
+        const adminUser: User = {
+          id: response.user?.id || 0,
+          name: response.user?.name || "Admin",
+          email: email,
+          accountNumber: response.user?.accountNumber || 0,
+          balance: response.user?.balance || 0,
+          role: "admin"
+        };
+        localStorage.setItem("financeFlowUser", JSON.stringify(adminUser));
+        setUser(adminUser);
+        router.push("/admin-dashboard");
+        return;
       }
 
+      // Handle regular user login
       if (!response.user) {
         throw new Error("Invalid response from server: Missing user data")
       }

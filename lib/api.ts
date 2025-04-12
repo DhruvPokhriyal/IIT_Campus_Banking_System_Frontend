@@ -14,6 +14,7 @@ interface LoginResponse {
   status: string
   message: string
   user: User
+  token: string
 }
 
 interface Account {
@@ -224,9 +225,25 @@ export const handleApiError = (error: unknown) => {
 };
 
 export const getAllUsers = async (): Promise<User[]> => {
-  return apiRequest<User[]>("admin/users", "GET")
+  console.log("Fetching all users...");
+  try {
+    const users = await apiRequest<User[]>("admin/users", "GET");
+    console.log("Users response:", users);
+    return users;
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    throw error;
+  }
 }
 
 export const getAllTransactions = async (): Promise<Transaction[]> => {
-  return apiRequest<Transaction[]>("admin/transactions", "GET")
+  console.log("Fetching all transactions...");
+  try {
+    const transactions = await apiRequest<Transaction[]>("admin/transactions", "GET");
+    console.log("Transactions response:", transactions);
+    return transactions;
+  } catch (error) {
+    console.error("Error fetching transactions:", error);
+    throw error;
+  }
 }
