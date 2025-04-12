@@ -222,3 +222,11 @@ export const handleApiError = (error: unknown) => {
   }
   return { message: 'An unexpected error occurred' };
 };
+
+export const getAllUsers = async (): Promise<User[]> => {
+  return apiRequest<User[]>("/api/users", "GET")
+}
+
+export const getAllTransactions = async (): Promise<Transaction[]> => {
+  return apiRequest<Transaction[]>("/api/transactions", "GET")
+}

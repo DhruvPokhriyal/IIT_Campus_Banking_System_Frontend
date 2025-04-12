@@ -79,7 +79,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         response = await loginAdmin(email, password)
       }
 
-      if (response.status !== "LOGIN_SUCCESS") {
+      console.log('Login response:', response);
+
+      // Check for success message
+      if (response.message === "Login successful") {
+        // For admin login, we might not get a user object
+        if (!response.user) {
+          const adminUser: User = {
+            id: 0,
+            name: "Admin",
+            email: email,
+            accountNumber: 0,
+            balance: 0,
+            role: "admin"
+          };
+          localStorage.setItem("financeFlowUser", JSON.stringify(adminUser));
+          setUser(adminUser);
+          router.push("/dashboard");
+          return;
+        }
+      }
+
+      if (response.status !== "LOGIN_SUCCESS" && response.message !== "Login successful") {
         throw new Error(response.message || "Login failed")
       }
 
@@ -101,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(userData)
       router.push("/dashboard")
     } catch (error) {
+      console.error('Login error:', error);
       const apiError = handleApiError(error)
       setError(apiError.message)
       throw error

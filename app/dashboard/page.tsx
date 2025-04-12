@@ -86,8 +86,16 @@ export default function DashboardPage() {
       return
     }
 
-    // Fetch account details, balance, and transactions
-    fetchAccountData(user.accountNumber)
+    // Redirect admin users to admin dashboard
+    if (user.role === "admin") {
+      router.push("/admin-dashboard")
+      return
+    }
+
+    // Only fetch account data for regular users
+    if (user.accountNumber) {
+      fetchAccountData(user.accountNumber)
+    }
   }, [user, router])
 
   const fetchAccountData = async (accountNumber: number) => {
