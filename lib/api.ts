@@ -39,9 +39,10 @@ interface Transaction {
 }
 
 export interface RegisterResponse {
-  status: string
-  message: string
-  user: User
+  name: string
+  email: string
+  accountNumber: number
+  balance: number
 }
 
 // Base API request function with error handling
@@ -75,12 +76,17 @@ const apiRequest = async <T>(
 
   try {
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-    const response = await fetch(`${API_BASE_URL}/${cleanEndpoint}`, options);
+    const url = `${API_BASE_URL}/${cleanEndpoint}`;
+    console.log(`Making ${method} request to:`, url);
+    console.log('Request options:', { ...options, body: data ? '[REDACTED]' : undefined });
     
+    const response = await fetch(url, options);
     const responseData = await response.json();
     
+    console.log('Response status:', response.status);
+    console.log('Response data:', responseData);
+    
     if (!response.ok) {
-      // Log the full error response for debugging
       console.error('Server error response:', {
         status: response.status,
         statusText: response.statusText,
@@ -92,6 +98,7 @@ const apiRequest = async <T>(
 
     return responseData;
   } catch (error) {
+    console.error('API request error:', error);
     if (error instanceof TypeError && error.message === 'Failed to fetch') {
       throw new Error('Unable to connect to the server. Please check your connection.');
     }
@@ -119,31 +126,34 @@ export const registerUser = async (userData: {
   // Add detailed logging
   console.log('Registering user with data:', {
     ...userData,
-    password: userData.password, // Log actual password for debugging
-    confirmPassword: userData.confirmPassword // Log actual password for debugging
+    password: '[REDACTED]',
+    confirmPassword: '[REDACTED]'
   });
 
   // Check if passwords match
   if (userData.password !== userData.confirmPassword) {
-    console.log('Password mismatch:', {
-      password: userData.password,
-      confirmPassword: userData.confirmPassword
-    });
     throw new Error("Passwords do not match");
   }
 
-  // Send the complete user data including confirmPassword
-  console.log('Sending request with data:', {
-    ...userData,
-    password: userData.password // Log actual password for debugging
-  });
-
   try {
     const response = await apiRequest<RegisterResponse>('users/register', 'POST', userData);
-    console.log('Registration response:', response);
+    console.log('Raw registration response:', response);
+    
+    // Validate response format
+    if (!response || typeof response !== 'object') {
+      console.error('Invalid response format:', response);
+      throw new Error('Invalid response format from server');
+    }
+    
+    // Check for required fields
+    if (!response.name || !response.email || typeof response.accountNumber !== 'number' || typeof response.balance !== 'number') {
+      console.error('Missing required fields in response:', response);
+      throw new Error('Missing required fields in response');
+    }
+    
     return response;
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('Registration error details:', error);
     throw error;
   }
 };

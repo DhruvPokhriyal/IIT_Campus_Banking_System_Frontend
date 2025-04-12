@@ -121,21 +121,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true)
     setError(null)
     try {
-      // Add logging to debug password values
-      console.log('Auth context - Registration data:', {
-        ...userData,
-        password: userData.password, // Log actual password for debugging
-        confirmPassword: userData.confirmPassword // Log actual password for debugging
-      });
-
-      if (userData.password !== userData.confirmPassword) {
-        console.log('Auth context - Password mismatch:', {
-          password: userData.password,
-          confirmPassword: userData.confirmPassword
-        });
-        throw new Error("Passwords do not match");
-      }
-
       const response = await registerUser({
         name: userData.name,
         email: userData.email,
@@ -147,11 +132,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       console.log('Auth context - Registration response:', response);
       
-      if (response.status !== "REGISTRATION_SUCCESS") {
-        throw new Error(response.message || "Registration failed");
-      }
-
+      // If we get here, registration was successful (200 status)
       router.push("/login");
+      return;
+
     } catch (error) {
       console.error('Auth context - Registration error:', error);
       const apiError = handleApiError(error);
