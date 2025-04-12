@@ -224,9 +224,9 @@ export const handleApiError = (error: unknown) => {
 };
 
 export const getAllUsers = async (): Promise<User[]> => {
-  return apiRequest<User[]>("/api/users", "GET")
+  return apiRequest<User[]>("admin/users", "GET")
 }
 
 export const getAllTransactions = async (): Promise<Transaction[]> => {
-  return apiRequest<Transaction[]>("/api/transactions", "GET")
+  return apiRequest<Transaction[]>("admin/transactions", "GET")
 }
