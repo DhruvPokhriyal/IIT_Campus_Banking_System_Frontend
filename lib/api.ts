@@ -39,10 +39,14 @@ interface Transaction {
 }
 
 export interface RegisterResponse {
+  id?: number
   name: string
   email: string
   accountNumber: number
   balance: number
+  role: string
+  message?: string
+  status?: string
 }
 
 // Base API request function with error handling
@@ -126,16 +130,22 @@ export const registerUser = async (userData: {
     const response = await apiRequest<RegisterResponse>('users/register', 'POST', userData);
     console.log('Raw registration response:', response);
     
-    // Validate response format
+    // Check if we have a valid response
     if (!response || typeof response !== 'object') {
       console.error('Invalid response format:', response);
       throw new Error('Invalid response format from server');
     }
     
-    // Check for required fields
-    if (!response.name || !response.email || typeof response.accountNumber !== 'number' || typeof response.balance !== 'number') {
-      console.error('Missing required fields in response:', response);
-      throw new Error('Missing required fields in response');
+    // The server might return a success message without all fields
+    if (response.message && response.status === 'success') {
+      return {
+        id: 0, // Temporary ID since it's not provided
+        name: userData.name,
+        email: userData.email,
+        accountNumber: userData.accountNumber,
+        balance: userData.balance || 0,
+        role: 'user'
+      };
     }
     
     return response;
