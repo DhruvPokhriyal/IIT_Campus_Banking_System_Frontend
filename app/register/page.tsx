@@ -68,10 +68,18 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
+      // Add logging to debug form data
+      console.log('Form data:', {
+        ...formData,
+        password: '***', // Don't log actual password
+        confirmPassword: '***' // Don't log actual password
+      });
+
       await register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
+        confirmPassword: formData.confirmPassword,
         accountNumber: formData.accountNumber,
         startingBalance: Number.parseFloat(formData.startingBalance),
       })

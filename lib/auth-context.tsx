@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import { loginUser, loginAdmin, registerUser, handleApiError } from "@/lib/api"
+import { loginUser, loginAdmin, registerUser, handleApiError, RegisterResponse } from "@/lib/api"
 
 interface User {
   id: number
@@ -28,6 +28,7 @@ interface RegisterData {
   name: string
   email: string
   password: string
+  confirmPassword: string
   accountNumber: string
   startingBalance: number
 }
@@ -120,19 +121,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await registerUser(userData)
-      
-      if (response.status !== "REGISTRATION_SUCCESS") {
-        throw new Error(response.message || "Registration failed")
+      // Add logging to debug password values
+      console.log('Auth context - Registration data:', {
+        ...userData,
+        password: userData.password, // Log actual password for debugging
+        confirmPassword: userData.confirmPassword // Log actual password for debugging
+      });
+
+      if (userData.password !== userData.confirmPassword) {
+        console.log('Auth context - Password mismatch:', {
+          password: userData.password,
+          confirmPassword: userData.confirmPassword
+        });
+        throw new Error("Passwords do not match");
       }
 
-      router.push("/login")
+      const response = await registerUser({
+        name: userData.name,
+        email: userData.email,
+        password: userData.password,
+        confirmPassword: userData.confirmPassword,
+        accountNumber: Number(userData.accountNumber),
+        balance: userData.startingBalance
+      });
+      
+      console.log('Auth context - Registration response:', response);
+      
+      if (response.status !== "REGISTRATION_SUCCESS") {
+        throw new Error(response.message || "Registration failed");
+      }
+
+      router.push("/login");
     } catch (error) {
-      const apiError = handleApiError(error)
-      setError(apiError.message)
-      throw error
+      console.error('Auth context - Registration error:', error);
+      const apiError = handleApiError(error);
+      setError(apiError.message);
+      throw error;
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
