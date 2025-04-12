@@ -55,6 +55,7 @@ const apiRequest = async <T>(
   
   const defaultHeaders = {
     'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
     ...(token && { Authorization: `Bearer ${token}` }),
   };
 
@@ -63,14 +64,10 @@ const apiRequest = async <T>(
     headers: {
       ...defaultHeaders,
     },
+    mode: 'cors' as RequestMode,
   };
 
   if (data) {
-    // Only check for amount parameter on transaction-related endpoints
-    const isTransactionEndpoint = endpoint.includes('transactions/');
-    if (isTransactionEndpoint && !data.amount && method !== 'GET') {
-      throw new Error("Required parameter 'amount' is not present.");
-    }
     options.body = JSON.stringify(data);
   }
 
@@ -78,21 +75,11 @@ const apiRequest = async <T>(
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
     const url = `${API_BASE_URL}/${cleanEndpoint}`;
     console.log(`Making ${method} request to:`, url);
-    console.log('Request options:', { ...options, body: data ? '[REDACTED]' : undefined });
     
     const response = await fetch(url, options);
     const responseData = await response.json();
     
-    console.log('Response status:', response.status);
-    console.log('Response data:', responseData);
-    
     if (!response.ok) {
-      console.error('Server error response:', {
-        status: response.status,
-        statusText: response.statusText,
-        data: responseData
-      });
-      
       throw new Error(responseData.message || `HTTP error! status: ${response.status}`);
     }
 
@@ -173,15 +160,45 @@ export const getTransactions = async (accountNumber: number): Promise<Transactio
 };
 
 export const depositFunds = async (accountNumber: number, data: { amount: number }): Promise<Transaction> => {
-  return apiRequest(`transactions/deposit/${accountNumber}`, 'POST', data);
+  const amount = data.amount;
+  console.log('Deposit amount:', amount);
+  
+  if (isNaN(amount)) {
+    throw new Error('Invalid amount provided');
+  }
+  
+  const formattedAmount = amount.toFixed(2);
+  console.log('Formatted amount:', formattedAmount);
+  
+  return apiRequest(`transactions/deposit/${accountNumber}?amount=${formattedAmount}`, 'POST');
 };
 
 export const withdrawFunds = async (accountNumber: number, data: { amount: number }): Promise<Transaction> => {
-  return apiRequest(`transactions/withdraw/${accountNumber}`, 'POST', data);
+  const amount = data.amount;
+  console.log('Withdraw amount:', amount);
+  
+  if (isNaN(amount)) {
+    throw new Error('Invalid amount provided');
+  }
+  
+  const formattedAmount = amount.toFixed(2);
+  console.log('Formatted amount:', formattedAmount);
+  
+  return apiRequest(`transactions/withdraw/${accountNumber}?amount=${formattedAmount}`, 'POST');
 };
 
 export const transferFunds = async (senderId: number, receiverId: number, data: { amount: number }): Promise<Transaction> => {
-  return apiRequest('transactions/transfer', 'POST', { senderId, receiverId, ...data });
+  const amount = data.amount;
+  console.log('Transfer amount:', amount);
+  
+  if (isNaN(amount)) {
+    throw new Error('Invalid amount provided');
+  }
+  
+  const formattedAmount = amount.toFixed(2);
+  console.log('Formatted amount:', formattedAmount);
+  
+  return apiRequest(`transactions/transfer?senderId=${senderId}&receiverId=${receiverId}&amount=${formattedAmount}`, 'POST');
 };
 
 // Error handling utility
