@@ -353,7 +353,7 @@ export default function DashboardPage() {
                       <p className="font-medium">{accountDetails?.accountNumber}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Balance</p>
+                      <p className="text-sm text-muted-foreground">Initial Balance</p>
                       <p className="font-medium">${accountDetails?.balance.toFixed(2)}</p>
                     </div>
                   </div>
