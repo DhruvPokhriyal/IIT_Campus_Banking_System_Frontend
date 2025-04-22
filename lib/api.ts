@@ -247,3 +247,14 @@ export const getAllTransactions = async (): Promise<Transaction[]> => {
     throw error;
   }
 }
+
+export const deleteUser = async (user: User): Promise<void> => {
+  console.log("Deleting user:", user);
+  try {
+    await apiRequest("admin/users/delete", "DELETE", user);
+    console.log("User deleted successfully");
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    throw error;
+  }
+}

@@ -2,13 +2,24 @@
 
 import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth-context"
-import { getAllUsers, getAllTransactions } from "@/lib/api"
+import { getAllUsers, getAllTransactions, deleteUser } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { LogOut, Users, History } from "lucide-react"
+import { LogOut, Users, History, Trash2 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface User {
   id: number
@@ -43,6 +54,7 @@ export default function AdminDashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("users")
   const [error, setError] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState<number | null>(null)
 
   useEffect(() => {
     console.log("Admin Dashboard: Current user state:", { user })
@@ -93,6 +105,20 @@ export default function AdminDashboardPage() {
 
     fetchData()
   }, [user, router])
+
+  const handleDeleteUser = async (user: User) => {
+    setIsDeleting(user.id);
+    try {
+      await deleteUser(user);
+      setUsers(users.filter(u => u.id !== user.id));
+      toast.success("User deleted successfully");
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast.error("Failed to delete user");
+    } finally {
+      setIsDeleting(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -158,6 +184,7 @@ export default function AdminDashboardPage() {
                         <th className="px-6 py-3">Account Number</th>
                         <th className="px-6 py-3">Balance</th>
                         <th className="px-6 py-3">Role</th>
+                        <th className="px-6 py-3">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-muted">
@@ -168,6 +195,37 @@ export default function AdminDashboardPage() {
                           <td className="px-6 py-4">{user.accountNumber}</td>
                           <td className="px-6 py-4">${user.balance.toFixed(2)}</td>
                           <td className="px-6 py-4 capitalize">{user.role}</td>
+                          <td className="px-6 py-4">
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="destructive"
+                                  size="icon"
+                                  disabled={isDeleting === user.id}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the user account
+                                    and all associated data.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteUser(user)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
