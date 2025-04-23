@@ -1,182 +1,135 @@
 # IIT Campus Banking System Frontend
 
-A modern, secure, and user-friendly banking system frontend built with Next.js 13+, TypeScript, and Tailwind CSS. This system provides banking services for campus users with separate interfaces for regular users and administrators.
+A modern, secure, and user-friendly banking system frontend designed specifically for IIT campuses. This Next.js application provides a seamless banking experience with features tailored for students, faculty, and administrative staff.
 
-## Features
+## 🚀 Features
 
-### User Features
+-   **User Authentication**
 
--   🔐 Secure Authentication System
--   💰 Account Balance Management
--   💸 Money Transfers
--   📥 Deposits
--   📤 Withdrawals
--   📊 Transaction History
--   🔄 Real-time Updates
+    -   Secure login and registration system
+    -   Role-based access control (Student, Faculty, Admin)
+    -   Password protection and session management
 
-### Admin Features
+-   **Dashboard**
 
--   👥 User Management
--   📈 Transaction Monitoring
--   🏦 System Overview
--   📊 User Statistics
+    -   Real-time account overview
+    -   Transaction history
+    -   Quick access to common banking operations
 
-## Tech Stack
+-   **Admin Dashboard**
 
--   **Framework**: Next.js 13+ (App Router)
--   **Language**: TypeScript
+    -   User management
+    -   Transaction monitoring
+    -   System analytics and reporting
+
+-   **Modern UI/UX**
+    -   Responsive design
+    -   Dark/Light mode support
+    -   Intuitive navigation
+    -   Interactive data visualizations
+
+## 🛠️ Tech Stack
+
+-   **Frontend Framework**: Next.js 15.2.4
+-   **UI Components**: Radix UI
 -   **Styling**: Tailwind CSS
--   **UI Components**: shadcn/ui
+-   **Form Handling**: React Hook Form with Zod validation
 -   **State Management**: React Context
--   **Authentication**: JWT-based auth
--   **HTTP Client**: Native Fetch API
+-   **Charts & Visualizations**: Recharts
+-   **Date Handling**: date-fns
+-   **Type Safety**: TypeScript
+-   **Build Tools**:
+    -   PostCSS
+    -   Tailwind CSS
+    -   Autoprefixer
 
-## Getting Started
-
-### Prerequisites
-
--   Node.js 18+
--   npm or yarn
--   Backend API running (see Backend Repository)
-
-### Installation
+## 📦 Installation
 
 1. Clone the repository:
 
-```bash
-git clone https://github.com/your-username/IIT_Campus_Banking_System_Frontend.git
-cd IIT_Campus_Banking_System_Frontend
-```
+    ```bash
+    git clone https://github.com/your-username/IIT_Campus_Banking_System_Frontend.git
+    cd IIT_Campus_Banking_System_Frontend
+    ```
 
 2. Install dependencies:
 
-```bash
-npm install
-# or
-yarn install
-```
+    ```bash
+    npm install
+    # or
+    yarn install
+    # or
+    pnpm install
+    ```
 
-3. Create a `.env.local` file in the root directory:
+3. Create a `.env.local` file in the root directory and add your environment variables:
 
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8080/api
-```
+    ```
+    NEXT_PUBLIC_API_URL=your_api_url
+    # Add other environment variables as needed
+    ```
 
 4. Start the development server:
 
-```bash
-npm run dev
-# or
-yarn dev
+    ```bash
+    npm run dev
+    # or
+    yarn dev
+    # or
+    pnpm dev
+    ```
+
+5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+
+## 📁 Project Structure
+
+```
+├── app/                    # Next.js app directory
+│   ├── admin-dashboard/   # Admin interface
+│   ├── dashboard/         # User dashboard
+│   ├── login/            # Authentication pages
+│   └── register/
+├── components/            # Reusable UI components
+├── hooks/                # Custom React hooks
+├── lib/                  # Utility functions and configurations
+├── public/               # Static assets
+└── styles/              # Global styles and Tailwind config
 ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+## 🎯 Usage
 
-## Project Structure
+1. **Authentication**
 
-```
-IIT_Campus_Banking_System_Frontend/
-├── app/                      # Next.js app directory
-│   ├── layout.tsx           # Root layout
-│   ├── page.tsx             # Home page
-│   ├── login/               # Login route
-│   ├── dashboard/           # User dashboard
-│   └── admin-dashboard/     # Admin dashboard
-├── components/              # Reusable components
-│   └── ui/                 # UI components
-├── lib/                    # Utilities and contexts
-│   ├── auth-context.tsx    # Auth context
-│   └── api.ts             # API functions
-└── public/                 # Static assets
-```
+    - Navigate to `/login` to access your account
+    - New users can register at `/register`
 
-## Key Features Explained
+2. **Dashboard**
 
-### Authentication
+    - After login, you'll be redirected to your personalized dashboard
+    - Access account information, transactions, and banking features
 
--   JWT-based authentication
--   Role-based access control (User/Admin)
--   Persistent sessions
--   Secure token storage
+3. **Admin Features**
+    - Access the admin dashboard at `/admin-dashboard`
+    - Manage users, monitor transactions, and view system analytics
 
-### User Dashboard
+## 🤝 Contributing
 
--   Real-time balance display
--   Transaction history
--   Money transfer functionality
--   Deposit and withdrawal features
-
-### Admin Dashboard
-
--   Complete user management
--   Transaction monitoring
--   System statistics
--   User activity tracking
-
-## API Integration
-
-The frontend connects to a RESTful API with the following main endpoints:
-
--   `/auth/login` - User authentication
--   `/auth/admin/login` - Admin authentication
--   `/admin/users` - User management (Admin only)
--   `/admin/transactions` - Transaction monitoring (Admin only)
--   `/transactions` - User transactions
--   `/accounts` - Account management
-
-## Security Features
-
--   JWT token authentication
--   Protected routes
--   Role-based access control
--   Secure credential handling
--   XSS protection
--   CORS configuration
-
-## Development
-
-### Commands
-
-```bash
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
-
-# Run linting
-npm run lint
-```
-
-### Code Style
-
--   ESLint configuration for TypeScript
--   Prettier for code formatting
--   Husky for pre-commit hooks
-
-## Contributing
+We welcome contributions! Please follow these steps:
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## License
+## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
+## 📞 Support
 
--   [Next.js Documentation](https://nextjs.org/docs)
--   [Tailwind CSS](https://tailwindcss.com)
--   [shadcn/ui](https://ui.shadcn.com)
--   [TypeScript](https://www.typescriptlang.org)
+For support, please contact the development team or open an issue in the repository.
 
-## Contact
+---
 
-Your Name - your.email@example.com
-Project Link: [https://github.com/your-username/IIT_Campus_Banking_System_Frontend](https://github.com/your-username/IIT_Campus_Banking_System_Frontend)
+Built with ❤️ for IIT campuses
